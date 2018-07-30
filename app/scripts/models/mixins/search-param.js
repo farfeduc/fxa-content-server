@@ -14,24 +14,49 @@ module.exports = {
   dependsOn: [ SearchParamMixin ],
 
   /**
-     * Import search parameters defined in the schema. Parameters are
-     * transformed and validated based on the rules defined in the `schema`.
-     *
-     * @param {Object} schema - schema used to define data to import
-     * and validate against
-     * @param {Object} Errors - errors object used to generate errors
-     * @throws
-     * If a required field is missing from the data, a
-     * `MISSING_ERROR` error is generated, with the error's
-     * `param` field set to the missing field's name.
-     *
-     * If a field does not pass validation, an
-     * `INVALID_PARAMETER` error is generated, with the error's
-     * `param` field set to the invalid field's name.
-     */
+   * Import search parameters defined in the schema. Parameters are
+   * transformed and validated based on the rules defined in the `schema`.
+   *
+   * @param {Object} schema - schema used to define data to import
+   * and validate against
+   * @param {Object} Errors - errors object used to generate errors
+   * @throws
+   * If a required field is missing from the data, a
+   * `MISSING_ERROR` error is generated, with the error's
+   * `param` field set to the missing field's name.
+   *
+   * If a field does not pass validation, an
+   * `INVALID_PARAMETER` error is generated, with the error's
+   * `param` field set to the invalid field's name.
+   */
   importSearchParamsUsingSchema (schema, Errors) {
-    var params = this.getSearchParams(Object.keys(schema));
-    var result = Transform.transformUsingSchema(params, schema, Errors);
+    const params = this.getSearchParams(Object.keys(schema));
+    this.importFromObjectUsingSchema(params, schema, Errors);
+  },
+
+  /**
+   * Import hash parameters defined in the schema. Parameters are
+   * transformed and validated based on the rules defined in the `schema`.
+   *
+   * @param {Object} schema - schema used to define data to import
+   * and validate against
+   * @param {Object} Errors - errors object used to generate errors
+   * @throws
+   * If a required field is missing from the data, a
+   * `MISSING_ERROR` error is generated, with the error's
+   * `param` field set to the missing field's name.
+   *
+   * If a field does not pass validation, an
+   * `INVALID_PARAMETER` error is generated, with the error's
+   * `param` field set to the invalid field's name.
+   */
+  importHashParamsUsingSchema (schema, Errors) {
+    const params = this.getHashParams(Object.keys(schema));
+    this.importFromObjectUsingSchema(params, schema, Errors);
+  },
+
+  importFromObjectUsingSchema (obj, schema, Errors) {
+    const result = Transform.transformUsingSchema(obj, schema, Errors);
     this.set(result);
   }
 };

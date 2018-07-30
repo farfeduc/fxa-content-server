@@ -19,7 +19,7 @@ import ResumeTokenMixin from '../mixins/resume-token';
 import SearchParamMixin from '../mixins/search-param';
 import Vat from '../../lib/vat';
 
-var RELIER_FIELDS_IN_RESUME_TOKEN = [
+const RELIER_FIELDS_IN_RESUME_TOKEN = [
   'entrypoint',
   'resetPasswordConfirm',
   'utmCampaign',
@@ -29,8 +29,8 @@ var RELIER_FIELDS_IN_RESUME_TOKEN = [
   'utmTerm'
 ];
 
-  /*eslint-disable camelcase*/
-var QUERY_PARAMETER_SCHEMA = {
+/*eslint-disable camelcase*/
+const QUERY_PARAMETER_SCHEMA = {
   email: Vat.email().allow(Constants.DISALLOW_CACHED_CREDENTIALS),
   // FxDesktop declares both `entryPoint` (capital P) and
   // `entrypoint` (lowcase p). Normalize to `entrypoint`.
@@ -47,7 +47,7 @@ var QUERY_PARAMETER_SCHEMA = {
   utm_term: Vat.string().renameTo('utmTerm')
 };
 
-var VERIFICATION_QUERY_PARAMETER_SCHEMA = _.extend({}, QUERY_PARAMETER_SCHEMA, {
+const VERIFICATION_QUERY_PARAMETER_SCHEMA = _.extend({}, QUERY_PARAMETER_SCHEMA, {
   // Verification links are sometimes broken by mail user-agents.
   // The rules on the following fields are relaxed for startup,
   // and then further validated by the views that use them. If
@@ -58,9 +58,9 @@ var VERIFICATION_QUERY_PARAMETER_SCHEMA = _.extend({}, QUERY_PARAMETER_SCHEMA, {
   uid: Vat.string()
 });
 
-  /*eslint-enable camelcase*/
+/*eslint-enable camelcase*/
 
-var Relier = BaseRelier.extend({
+const Relier = BaseRelier.extend({
   defaults: {
     allowCachedCredentials: true,
     // This ensures for non-oauth reliers, SOME context is sent to the auth

@@ -6,12 +6,14 @@
  * The Sync relier.
  */
 
+
 import _ from 'underscore';
 import AuthErrors from '../../lib/auth-errors';
-const AllowedCountries = Object.keys(require('../../lib/country-telephone-info'));
+import CountryTelephoneInfo from '../../lib/country-telephone-info';
 import Relier from './relier';
 import Vat from '../../lib/vat';
 
+const AllowedCountries = Object.keys(CountryTelephoneInfo);
 const t = (msg) => msg;
 
 /*eslint-disable camelcase*/
@@ -28,7 +30,7 @@ const QUERY_PARAMETER_SCHEMA = {
   // The error will be logged and the signinCode ignored.
   signin: Vat.string().empty('').renameTo('signinCode')
 };
-  /*eslint-enable camelcase*/
+/*eslint-enable camelcase*/
 
 module.exports = Relier.extend({
   defaults: _.extend({}, Relier.prototype.defaults, {

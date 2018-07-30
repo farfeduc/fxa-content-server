@@ -15,48 +15,52 @@
  * 6) Start the app if cookies are enabled.
  */
 
-const _ = require('underscore');
-const ExperimentGroupingRules = require('./experiments/grouping-rules/index');
-const AppView = require('../views/app');
-const authBrokers = require('../models/auth_brokers/index');
-const Assertion = require('./assertion');
-const Backbone = require('backbone');
-const Cocktail = require('./cocktail');
-const Constants = require('./constants');
-const Environment = require('./environment');
-const ErrorUtils = require('./error-utils');
-const FormPrefill = require('../models/form-prefill');
-const FxaClient = require('./fxa-client');
-const HeightObserver = require('./height-observer');
-const IframeChannel = require('./channels/iframe');
-const InterTabChannel = require('./channels/inter-tab');
-const MarketingEmailClient = require('./marketing-email-client');
-const Metrics = require('./metrics');
-const Notifier = require('./channels/notifier');
-const NullChannel = require('./channels/null');
-const OAuthClient = require('./oauth-client');
-const OAuthRelier = require('../models/reliers/oauth');
-const p = require('./promise');
-const ProfileClient = require('./profile-client');
-const RefreshObserver = require('../models/refresh-observer');
-const Relier = require('../models/reliers/relier');
-const Router = require('./router');
-const SameBrowserVerificationModel = require('../models/verification/same-browser');
-const ScreenInfo = require('./screen-info');
-const SentryMetrics = require('./sentry');
-const Session = require('./session');
-const Storage = require('./storage');
-const StorageMetrics = require('./storage-metrics');
-const SyncRelier = require('../models/reliers/sync');
-const Translator = require('./translator');
-const UniqueUserId = require('../models/unique-user-id');
-const Url = require('./url');
-const User = require('../models/user');
-const UserAgentMixin = require('./user-agent-mixin');
-const uuid = require('uuid');
-const WebChannel = require('./channels/web');
+import _ from 'underscore';
+import ExperimentGroupingRules from './experiments/grouping-rules/index';
+import AppView from '../views/app';
+import authBrokers from '../models/auth_brokers/index';
+import Assertion from './assertion';
+import Backbone from 'backbone';
+import Cocktail from './cocktail';
+import Constants from './constants';
+import Environment from './environment';
+import ErrorUtils from './error-utils';
+import FormPrefill from '../models/form-prefill';
+import FxaClient from './fxa-client';
+import HeightObserver from './height-observer';
+import IframeChannel from './channels/iframe';
+import InterTabChannel from './channels/inter-tab';
+import MarketingEmailClient from './marketing-email-client';
+import Metrics from './metrics';
+import Notifier from './channels/notifier';
+import NullChannel from './channels/null';
+import OAuthClient from './oauth-client';
+import OAuthRelier from '../models/reliers/oauth';
+import p from './promise';
+import ProfileClient from './profile-client';
+import RefreshObserver from '../models/refresh-observer';
+import Relier from '../models/reliers/relier';
+import Router from './router';
+import SameBrowserVerificationModel from '../models/verification/same-browser';
+import ScreenInfo from './screen-info';
+import SentryMetrics from './sentry';
+import Session from './session';
+import Storage from './storage';
+import StorageMetrics from './storage-metrics';
+import SupplicantRelier from '../models/reliers/supplicant';
+import SyncRelier from '../models/reliers/sync';
+import Translator from './translator';
+import UniqueUserId from '../models/unique-user-id';
+import Url from './url';
+import User from '../models/user';
+import UserAgentMixin from './user-agent-mixin';
+import uuid from 'uuid';
+import WebChannel from './channels/web';
 
 const AUTOMATED_BROWSER_STARTUP_DELAY = 750;
+
+const DEVICE_PAIRING_AUTH_PATHNAME_REGEXP = /^\/pair\/auth/;
+const DEVICE_PAIRING_SUPPLICANT_PATHNAME_REGEXP = /^\/pair\/supp/;
 
 function Start(options = {}) {
   this._authenticationBroker = options.broker;
@@ -259,7 +263,21 @@ Start.prototype = {
       // as the OAuth check - when users sign up for Sync
       // and verify in a 2nd browser, all we have to know the user
       // is completing a Sync flow is `service=sync`.
-      if (this._isOAuth()) {
+
+      if (this.isDevicePairingAsAuthority()) {
+        relier = new SupplicantRelier({}, {
+          config: this._config,
+          oAuthClientId: this._config.oAuthClientId,
+          oAuthUrl: this._config.oAuthUrl
+        });
+      } else if (this.isDevicePairingAsSupplicant()) {
+        relier = new SupplicantRelier({}, {
+          config: this._config,
+          isSupplicant: true,
+          oAuthClientId: this._config.oAuthClientId,
+          oAuthUrl: this._config.oAuthUrl
+        });
+      } else if (this._isOAuth()) {
         relier = new OAuthRelier({ context }, {
           config: this._config,
           isVerification: this._isVerification(),
@@ -298,7 +316,11 @@ Start.prototype = {
   initializeAuthenticationBroker () {
     if (! this._authenticationBroker) {
       let context;
-      if (this._isFxDesktopV2()) {
+      if (this.isDevicePairingAsAuthority()) {
+        context = Constants.DEVICE_PAIRING_AUTHORITY_CONTEXT;
+      } else if (this.isDevicePairingAsSupplicant()) {
+        context = Constants.DEVICE_PAIRING_SUPPLICANT_CONTEXT;
+      } else if (this._isFxDesktopV2()) {
         if (this._isIframeContext()) {
           context = Constants.FX_FIRSTRUN_V1_CONTEXT;
         } else {
@@ -317,6 +339,7 @@ Start.prototype = {
       const Constructor = authBrokers.get(context);
       this._authenticationBroker = new Constructor({
         assertionLibrary: this._assertionLibrary,
+        config: this._config,
         fxaClient: this._fxaClient,
         iframeChannel: this._iframeChannel,
         isVerificationSameBrowser: this._isVerificationSameBrowser(),
@@ -470,6 +493,7 @@ Start.prototype = {
   createView (Constructor, options = {}) {
     const viewOptions = _.extend({
       broker: this._authenticationBroker,
+      config: this._config,
       createView: this.createView.bind(this),
       experimentGroupingRules: this._experimentGroupingRules,
       formPrefill: this._formPrefill,
@@ -613,6 +637,26 @@ Start.prototype = {
 
   _isServiceSync () {
     return this._isService(Constants.SYNC_SERVICE);
+  },
+
+  /**
+   * Is the user initiating a device pairing flow as
+   * the auth device?
+   *
+   * @returns {Boolean}
+   */
+  isDevicePairingAsAuthority () {
+    return DEVICE_PAIRING_AUTH_PATHNAME_REGEXP.test(this._window.location.pathname);
+  },
+
+  /**
+   * Is the user initiating a device pairing flow as
+   * the supplicant device?
+   *
+   * @returns {Boolean}
+   */
+  isDevicePairingAsSupplicant () {
+    return DEVICE_PAIRING_SUPPLICANT_PATHNAME_REGEXP.test(this._window.location.pathname);
   },
 
   _isServiceOAuth () {

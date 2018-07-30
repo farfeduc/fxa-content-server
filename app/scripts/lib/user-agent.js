@@ -143,6 +143,30 @@ const UserAgent = function (userAgent) {
         minor: parseInt(osVersion[1] || 0, 10),
         patch: parseInt(osVersion[2] || 0, 10)
       };
+    },
+
+    /**
+     * Get the generic operating system name.
+     *
+     * @param {String} [os=this.os.name] Full Operating System name
+     * @returns {String} generic operating system name
+     */
+    genericOSName (os = this.os.name) {
+      return UserAgent.toGenericOSName(os);
+    },
+
+    genericDeviceType () {
+      switch (this.device.type) {
+      case 'mobile':
+      case 'tablet':
+        return this.device.type;
+      case 'smarttv':
+      case 'wearable':
+      case 'embedded':
+        return 'mobile';
+      default:
+        return 'desktop';
+      }
     }
   });
 

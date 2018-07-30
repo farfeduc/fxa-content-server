@@ -22,7 +22,48 @@ module.exports = {
       return {};
     }
 
-    const pairs = search.split('&');
+    return this.splitEncodedParams(search, allowedFields);
+  },
+
+  /**
+   * Return the value of a single query parameter in the string
+   *
+   * @param {String} name - name of the query parameter
+   * @param {String} [str] - search string
+   * @returns {String}
+   */
+  searchParam (name, str) {
+    return this.searchParams(str)[name];
+  },
+
+  /**
+   * Convert a hash string to its object representation, one entry
+   * per query parameter
+   *
+   * @param {String} str - string to convert
+   * @param {String[]} [allowedFields] - list of allowed fields. If not
+   * declared, all fields are allowed.
+   * @returns {Object}
+   */
+  hashParams (str, allowedFields) {
+    const hash = str.replace(/^#?/, '').trim();
+
+    return this.splitEncodedParams(hash, allowedFields);
+  },
+
+  /**
+   * Convert a URI encoded string to its object representation.
+   *
+   * `&` is the expected delimiter between parameters.
+   * `=` is the delimiter between a key and a value.
+   *
+   * @param {String} str string to split
+   * @param {String[]} [allowedFields] - list of allowed fields. If not
+   * declared, all fields are allowed.
+   * @returns {Object}
+   */
+  splitEncodedParams(str, allowedFields) {
+    const pairs = str.split('&');
     const terms = {};
 
     _.each(pairs, (pair) => {
@@ -38,23 +79,16 @@ module.exports = {
   },
 
   /**
-   * Return the value of a single query parameter in the string
-   *
-   * @param {String} name - name of the query parameter
-   * @param {String} [str] - search string
-   * @returns {String}
-   */
-  searchParam (name, str) {
-    return this.searchParams(str)[name];
-  },
-
-  /**
    * Convert an object to a search string.
    *
    * @param {Object} obj - object to convert
    * @returns {String}
    */
   objToSearchString (obj) {
+    return this.objToUrlString(obj, '?');
+  },
+
+  objToUrlString (obj, prefix = '?') {
     const params = [];
     for (const paramName in obj) {
       const paramValue = obj[paramName];
@@ -66,7 +100,8 @@ module.exports = {
     if (! params.length) {
       return '';
     }
-    return '?' + params.join('&');
+
+    return prefix + params.join('&');
   },
 
   /**

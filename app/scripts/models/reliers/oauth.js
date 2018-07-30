@@ -301,6 +301,8 @@ var OAuthRelier = Relier.extend({
     return ! account.hasSeenPermissions(
       this.get('clientId'), applicableProfilePermissions);
   }
+}, {
+  SIGNIN_SIGNUP_QUERY_PARAM_SCHEMA
 });
 
 function replaceItemInArray(array, itemToReplace, replaceWith) {

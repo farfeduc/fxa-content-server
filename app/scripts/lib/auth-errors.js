@@ -492,7 +492,16 @@ define(function (require, exports, module) {
     RECOVERY_KEY_REQUIRED: {
       errno: 1059,
       message: t('Recovery key required')
-    }
+    },
+    PAIRING_CHANNEL_CONNECTION_ERROR: {
+      errno: 1060,
+      message: t('Unable to create channel with server')
+    },
+    PAIRING_CHANNEL_CONNECTION_CLOSED: {
+      errno: 1061,
+      message: t('Connection closed, please try again')
+    },
+
   };
   /*eslint-enable sorting/sort-object-props*/
 
